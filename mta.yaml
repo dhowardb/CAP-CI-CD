@@ -1,0 +1,136 @@
+_schema-version: 3.3.0
+ID: CAP-CICD-Sample
+description: A simple CAP project.
+version: 1.0.0
+modules:
+- name: CAP-CICD-Sample-srv
+  type: nodejs
+  path: gen/srv
+  requires:
+  - name: CAP-CICD-Sample-db
+  - name: uaa_CAP-CICD-Sample
+  provides:
+  - name: srv-api
+    properties:
+      srv-url: ${default-url}
+  parameters:
+    buildpack: nodejs_buildpack
+    instances: 1
+  build-parameters:
+    builder: npm-ci
+- name: CAP-CICD-Sample-db-deployer
+  type: hdb
+  path: gen/db
+  requires:
+  - name: CAP-CICD-Sample-db
+  parameters:
+    buildpack: nodejs_buildpack
+- name: CAP-CICD-Sample-destination-content
+  type: com.sap.application.content
+  requires:
+  - name: CAP-CICD-Sample-destination-service
+    parameters:
+      content-target: true
+  - name: CAP-CICD-Sample_html_repo_host
+    parameters:
+      service-key:
+        name: CAP-CICD-Sample_html_repo_host-key
+  - name: uaa_CAP-CICD-Sample
+    parameters:
+      service-key:
+        name: uaa_CAP-CICD-Sample-key
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Name: sampleCICD_CAP_CICD_Sample_html_repo_host
+          ServiceInstanceName: CAP-CICD-Sample-html5-app-host-service
+          ServiceKeyName: CAP-CICD-Sample_html_repo_host-key
+          sap.cloud.service: sampleCICD
+        - Authentication: OAuth2UserTokenExchange
+          Name: sampleCICD_uaa_CAP_CICD_Sample
+          ServiceInstanceName: CAP-CICD-Sample-xsuaa-service
+          ServiceKeyName: uaa_CAP-CICD-Sample-key
+          sap.cloud.service: sampleCICD
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: CAP-CICD-Sample-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: CAP-CICD-Sample_html_repo_host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - samplebooks.zip
+      name: samplebooks
+      target-path: resources/
+- name: samplebooks
+  type: html5
+  path: app/samplebooks
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: CAP-CICD-Sample-db
+  type: com.sap.xs.hdi-container
+  parameters:
+    service: hana
+    service-plan: hdi-shared
+- name: CAP-CICD-Sample-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          - Authentication: NoAuthentication
+            HTML5.DynamicDestination: true
+            HTML5.ForwardAuthToken: true
+            Name: CAP-CICD-Sample-srv-api
+            ProxyType: Internet
+            Type: HTTP
+            URL: ~{srv-api/srv-url}
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: CAP-CICD-Sample-destination-service
+    service-plan: lite
+  requires:
+  - name: srv-api
+- name: CAP-CICD-Sample_html_repo_host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: CAP-CICD-Sample-html5-app-host-service
+    service-plan: app-host
+- name: uaa_CAP-CICD-Sample
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: CAP-CICD-Sample-xsuaa-service
+    service-plan: application
+parameters:
+  deploy_mode: html5-repo
+  enable-parallel-deployments: true
+build-parameters:
+  before-all:
+  - builder: custom
+    commands:
+    - npm ci
+    - npx cds build --production
