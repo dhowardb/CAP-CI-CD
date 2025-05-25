@@ -7,7 +7,6 @@ modules:
   type: nodejs
   path: gen/srv
   requires:
-  - name: CAP-CICD-Sample-db
   - name: uaa_CAP-CICD-Sample
   provides:
   - name: srv-api
@@ -18,13 +17,6 @@ modules:
     instances: 1
   build-parameters:
     builder: npm-ci
-- name: CAP-CICD-Sample-db-deployer
-  type: hdb
-  path: gen/db
-  requires:
-  - name: CAP-CICD-Sample-db
-  parameters:
-    buildpack: nodejs_buildpack
 - name: CAP-CICD-Sample-destination-content
   type: com.sap.application.content
   requires:
@@ -80,11 +72,6 @@ modules:
     - npm run build:cf
     supported-platforms: []
 resources:
-- name: CAP-CICD-Sample-db
-  type: com.sap.xs.hdi-container
-  parameters:
-    service: hana
-    service-plan: hdi-shared
 - name: CAP-CICD-Sample-destination-service
   type: org.cloudfoundry.managed-service
   parameters:
