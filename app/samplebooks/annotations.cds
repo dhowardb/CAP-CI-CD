@@ -36,12 +36,12 @@ annotate service.Books with @(
         },
         {
             $Type : 'UI.DataField',
-            Label : 'title',
+            Label : 'Books Title',
             Value : title,
         },
         {
             $Type : 'UI.DataField',
-            Label : 'stock',
+            Label : 'Books stock',
             Value : stock,
         },
     ],
